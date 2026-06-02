@@ -2,7 +2,6 @@
 
 Ini adalah repositori untuk **Service Manajemen Tiket Keluhan Tenant**, bagian dari arsitektur *microservices* Sistem Manajemen Rental. Service ini bertanggung jawab untuk mencatat, mengelola, dan melacak status keluhan dari tenant.
 
-Service ini juga terintegrasi dengan **Listing Service** dan **Contract Service** untuk memvalidasi kepemilikan unit dan keabsahan kontrak sebelum tiket keluhan diterbitkan.
 
 ## 🛠️ Tech Stack
 * **Framework:** Laravel

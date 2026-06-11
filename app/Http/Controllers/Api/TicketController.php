@@ -1,176 +1,89 @@
 <?php
-
+ 
 namespace App\Http\Controllers\Api;
-
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\Controller; 
 use App\Models\Ticket;
+use App\Services\SoapAuditService;
+use App\Services\RabbitMQService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Validator;
-
+ 
 class TicketController extends Controller
 {
-    /**
-     * @OA\Get(
-     * path="/api/v1/tickets",
-     * operationId="getTicketsList",
-     * tags={"Tickets"},
-     * summary="Mengambil daftar riwayat tiket maintenance",
-     * security={{"ApiKeyAuth": {}}},
-     * @OA\Response(
-     * response=200,
-     * description="Sukses mengambil daftar tiket",
-     * @OA\JsonContent(
-     * type="object",
-     * @OA\Property(property="success", type="boolean", example=true),
-     * @OA\Property(property="message", type="string", example="Daftar riwayat tiket berhasil diambil"),
-     * @OA\Property(property="data", type="array", @OA\Items(
-     * @OA\Property(property="id", type="integer", example=1),
-     * @OA\Property(property="listing_id", type="integer", example=1),
-     * @OA\Property(property="contract_id", type="integer", example=101),
-     * @OA\Property(property="tenant_name", type="string", example="Dawai"),
-     * @OA\Property(property="description", type="string", example="Atap bocor"),
-     * @OA\Property(property="status", type="string", example="pending")
-     * ))
-     * )
-     * ),
-     * @OA\Response(response=401, description="Unauthorized (API Key tidak valid atau hilang)")
-     * )
-     */
+    public function __construct(
+        private SoapAuditService $soapService,
+        private RabbitMQService $rabbitService
+    ) {}
+ 
+    // GET /api/v1/tickets
     public function index()
     {
         $tickets = Ticket::all();
         return response()->json([
             'success' => true,
-            'message' => 'Daftar riwayat tiket berhasil diambil',
-            'data' => $tickets
-        ], 200);
+            'data'    => $tickets,
+        ]);
     }
-
-    /**
-     * @OA\Post(
-     * path="/api/v1/tickets",
-     * operationId="storeTicket",
-     * tags={"Tickets"},
-     * summary="Menambah data baru saat tenant input tiket kerusakan",
-     * security={{"ApiKeyAuth": {}}},
-     * @OA\RequestBody(
-     * required=true,
-     * @OA\JsonContent(
-     * required={"listing_id","contract_id","tenant_name","description"},
-     * @OA\Property(property="listing_id", type="integer", example=1),
-     * @OA\Property(property="contract_id", type="integer", example=101),
-     * @OA\Property(property="tenant_name", type="string", example="Dawai"),
-     * @OA\Property(property="description", type="string", example="Atap kamar utama bocor air merembes")
-     * )
-     * ),
-     * @OA\Response(
-     * response=201,
-     * description="Tiket berhasil disimpan",
-     * @OA\JsonContent(
-     * type="object",
-     * @OA\Property(property="success", type="boolean", example=true),
-     * @OA\Property(property="message", type="string", example="Tiket keluhan berhasil disimpan secara resmi"),
-     * @OA\Property(property="data", type="object",
-     * @OA\Property(property="id", type="integer", example=1),
-     * @OA\Property(property="listing_id", type="integer", example=1),
-     * @OA\Property(property="contract_id", type="integer", example=101),
-     * @OA\Property(property="tenant_name", type="string", example="Dawai"),
-     * @OA\Property(property="description", type="string", example="Atap bocor")
-     * )
-     * )
-     * ),
-     * @OA\Response(response=400, description="Validasi gagal atau verifikasi service luar ditolak"),
-     * @OA\Response(response=422, description="Unprocessable Entity")
-     * )
-     */
+ 
+    // GET /api/v1/tickets/{id}
+    public function show($id)
+    {
+        $ticket = Ticket::findOrFail($id);
+        return response()->json([
+            'success' => true,
+            'data'    => $ticket,
+        ]);
+    }
+ 
+    // POST /api/v1/tickets
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'listing_id' => 'required|integer',
-            'contract_id' => 'required|integer',
-            'tenant_name' => 'required|string|max:255',
-            'description' => 'required|string',
+        $request->validate([
+            'listing_id'   => 'required|string',
+            'contract_id'  => 'required|string',
+            'tenant_name'  => 'required|string',
+            'tenant_email' => 'required|email',
+            'description'  => 'required|string',
         ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'errors' => $validator->errors()
-            ], 422);
+ 
+        $jwtToken = $request->sso_token;
+ 
+        // STEP 1 & 2: Cross-check Service Listing & Kontrak
+        // TODO: Aktifkan kembali setelah service teman siap
+        // $listingResponse  = Http::get("http://URL_LISTING/api/v1/listings/{$request->listing_id}");
+        // $contractResponse = Http::get("http://URL_KONTRAK/api/v1/contracts/{$request->contract_id}");
+ 
+        // =============================================
+        // STEP 3: Simpan tiket ke database
+        // =============================================
+        $ticket = Ticket::create([
+            'listing_id'   => $request->listing_id,
+            'contract_id'  => $request->contract_id,
+            'tenant_name'  => $request->tenant_name,
+            'tenant_email' => $request->tenant_email,
+            'description'  => $request->description,
+            'status'       => 'open',
+        ]);
+ 
+        // =============================================
+        // STEP 4: Kirim SOAP Audit → simpan soap_receipt
+        // =============================================
+        $receiptNumber = $this->soapService->sendAudit($ticket->toArray(), $jwtToken);
+ 
+        if ($receiptNumber) {
+            $ticket->update(['soap_receipt' => $receiptNumber]);
+            $ticket->refresh();
         }
-
-        // Jalur integrasi dimatikan sementara untuk tes lokal
-        /*
-        $urlListing = env('LISTING_SERVICE_URL') . "/api/v1/listings/" . $request->listing_id; 
-        $responseListing = Http::withHeaders(['X-API-KEY' => 'KEY_RAFSAN'])->get($urlListing);
-
-        $urlContract = env('CONTRACT_SERVICE_URL') . "/api/v1/contracts/" . $request->contract_id; 
-        $responseContract = Http::withHeaders(['X-API-KEY' => 'KEY_AKHDAN'])->get($urlContract);
-
-        if (!$responseListing->successful() || !$responseContract->successful()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Proses ditolak. Unit properti tidak ditemukan atau masa kontrak sewa sudah tidak aktif.'
-            ], 400);
-        }
-        */
-
-        $ticket = Ticket::create($request->all());
-
+ 
+        // =============================================
+        // STEP 5: Publish event ke RabbitMQ
+        // =============================================
+        $this->rabbitService->publishTicketCreated($ticket->toArray(), $jwtToken);
+ 
         return response()->json([
             'success' => true,
-            'message' => 'Tiket keluhan berhasil disimpan secara resmi',
-            'data' => $ticket
+            'message' => 'Tiket berhasil dibuat',
+            'data'    => $ticket,
         ], 201);
     }
-
-    /**
-     * @OA\Get(
-     * path="/api/v1/tickets/{id}",
-     * operationId="getTicketById",
-     * tags={"Tickets"},
-     * summary="Mengambil data spesifik satu tiket keluhan",
-     * security={{"ApiKeyAuth": {}}},
-     * @OA\Parameter(
-     * name="id",
-     * description="ID Tiket",
-     * required=true,
-     * in="path",
-     * @OA\Schema(type="integer")
-     * ),
-     * @OA\Response(
-     * response=200,
-     * description="Sukses mengambil data spesifik tiket",
-     * @OA\JsonContent(
-     * type="object",
-     * @OA\Property(property="success", type="boolean", example=true),
-     * @OA\Property(property="message", type="string", example="Detail tiket berhasil ditemukan"),
-     * @OA\Property(property="data", type="object",
-     * @OA\Property(property="id", type="integer", example=1),
-     * @OA\Property(property="tenant_name", type="string", example="Dawai"),
-     * @OA\Property(property="status", type="string", example="pending")
-     * )
-     * )
-     * ),
-     * @OA\Response(response=404, description="Tiket tidak ditemukan")
-     * )
-     */
-    public function show(int $id)
-    {
-        $ticket = Ticket::find($id);
-
-        if (!$ticket) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Tiket keluhan tidak ditemukan'
-            ], 404);
-        }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Detail tiket berhasil ditemukan',
-            'data' => $ticket
-        ], 200);
-    }
 }
+ 

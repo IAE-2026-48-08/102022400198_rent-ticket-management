@@ -9,12 +9,13 @@ class Ticket extends Model
 {
     use HasFactory;
 
-
-   protected $fillable = [
+    protected $fillable = [
         'listing_id',
         'contract_id',
         'tenant_name',
+        'tenant_email',
         'description',
         'status',
+        'soap_receipt',
     ];
 }

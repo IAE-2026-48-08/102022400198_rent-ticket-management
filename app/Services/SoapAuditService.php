@@ -7,11 +7,21 @@ use Illuminate\Support\Facades\Log;
  
 class SoapAuditService
 {
-    private string $soapUrl = 'https://iae-sso.virtualfri.id/soap/v1/audit';
-    private string $teamId  = 'TEAM-08';
+    private string $soapUrl;
+    private string $teamId;
+    private SsoM2MService $ssoM2M;
  
-    public function sendAudit(array $ticketData, string $jwtToken): ?string
+    public function __construct(SsoM2MService $ssoM2M)
     {
+        $this->soapUrl = env('IAE_SSO_BASE_URL', 'https://iae-sso.virtualfri.id') . '/soap/v1/audit';
+        $this->teamId  = env('IAE_TEAM_ID', 'TEAM-08');
+        $this->ssoM2M  = $ssoM2M;
+    }
+ 
+    public function sendAudit(array $ticketData): ?string
+    {
+        // Ambil M2M token pakai API Key 
+        $m2mToken   = $this->ssoM2M->getToken();
         $logContent = json_encode($ticketData);
  
         $soapEnvelope = <<<XML
@@ -31,18 +41,16 @@ XML;
         try {
             $response = Http::withHeaders([
                 'Content-Type'  => 'text/xml',
-                'Authorization' => 'Bearer ' . $jwtToken,
+                'Authorization' => 'Bearer ' . $m2mToken,
             ])->withBody($soapEnvelope, 'text/xml')
               ->post($this->soapUrl);
  
             $receiptNumber = $this->parseReceiptNumber($response->body());
- 
-            Log::info('SOAP Audit berhasil', ['receipt' => $receiptNumber]);
- 
+            Log::info('[SOAP] Audit berhasil', ['receipt' => $receiptNumber]);
             return $receiptNumber;
  
         } catch (\Exception $e) {
-            Log::error('SOAP Audit gagal: ' . $e->getMessage());
+            Log::error('[SOAP] Audit gagal: ' . $e->getMessage());
             return null;
         }
     }
@@ -55,7 +63,7 @@ XML;
             $nodes = $xml->xpath('//iae:ReceiptNumber');
             return isset($nodes[0]) ? (string) $nodes[0] : null;
         } catch (\Exception $e) {
-            Log::error('Gagal parse ReceiptNumber: ' . $e->getMessage());
+            Log::error('[SOAP] Gagal parse ReceiptNumber: ' . $e->getMessage());
             return null;
         }
     }

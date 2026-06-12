@@ -1,7 +1,8 @@
 <?php
  
 namespace App\Http\Controllers\Api;
-use App\Http\Controllers\Controller; 
+ 
+use App\Http\Controllers\Controller;
 use App\Models\Ticket;
 use App\Services\SoapAuditService;
 use App\Services\RabbitMQService;
@@ -45,12 +46,10 @@ class TicketController extends Controller
             'description'  => 'required|string',
         ]);
  
-        $jwtToken = $request->sso_token;
- 
         // STEP 1 & 2: Cross-check Service Listing & Kontrak
-        // TODO: Aktifkan kembali setelah service teman siap
-        // $listingResponse  = Http::get("http://URL_LISTING/api/v1/listings/{$request->listing_id}");
-        // $contractResponse = Http::get("http://URL_KONTRAK/api/v1/contracts/{$request->contract_id}");
+        // TODO: Aktifkan setelah service teman siap
+        // $listingResponse  = Http::get(env('LISTING_SERVICE_URL') . "/api/v1/listings/{$request->listing_id}");
+        // $contractResponse = Http::get(env('CONTRACT_SERVICE_URL') . "/api/v1/contracts/{$request->contract_id}");
  
         // =============================================
         // STEP 3: Simpan tiket ke database
@@ -65,9 +64,9 @@ class TicketController extends Controller
         ]);
  
         // =============================================
-        // STEP 4: Kirim SOAP Audit → simpan soap_receipt
+        // STEP 4: Kirim SOAP Audit pakai M2M token
         // =============================================
-        $receiptNumber = $this->soapService->sendAudit($ticket->toArray(), $jwtToken);
+        $receiptNumber = $this->soapService->sendAudit($ticket->toArray());
  
         if ($receiptNumber) {
             $ticket->update(['soap_receipt' => $receiptNumber]);
@@ -75,9 +74,9 @@ class TicketController extends Controller
         }
  
         // =============================================
-        // STEP 5: Publish event ke RabbitMQ
+        // STEP 5: Publish event ke RabbitMQ pakai M2M token
         // =============================================
-        $this->rabbitService->publishTicketCreated($ticket->toArray(), $jwtToken);
+        $this->rabbitService->publishTicketCreated($ticket->toArray());
  
         return response()->json([
             'success' => true,

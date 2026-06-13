@@ -63,3 +63,44 @@
           'verify.sso' => \App\Http\Middleware\VerifySSOToken::class,
       ]);
   })
+
+### esi 06 - Update Credentials dari Dosen (M2M)
+
+*Prompt:
+"*soap dan rabbitmq harus menggunakan api key: akun warga: warga36@ktp.iae.id & API-KEY: KEY-MHS-280"
+
+**Insight yang Didapat:**
+
+
+*SOAP & RabbitMQ wajib pakai M2M token (dari api_key), bukan JWT user biasa
+Dibuat service baru: SsoM2MService.php
+
+*Login M2M ke /api/v1/auth/token dengan api_key
+Token di-cache 3300 detik (55 menit) pakai Cache::put() agar tidak login berulang
+SoapAuditService dan RabbitMQService direfactor:
+*Constructor inject SsoM2MService
+*Parameter $jwtToken dihapus, diganti $ssoM2M->getToken()
+
+TicketController disederhanakan — tidak perlu lagi passing JWT ke kedua service
+.env ditambah: IAE_API_KEY=KEY-MHS-280, IAE_TEAM_ID=TEAM-08, IAE_SSO_EMAIL=warga36@ktp.iae.id, dll
+.env.example diupdate dengan key yang sama tapi value kosong (template)
+
+### Refleksi Penggunaan AI
+
+**Hal yang efektif:**
+
+
+AI sangat membantu dalam debugging iteratif: kirim screenshot/log error → AI analisis root cause → berikan fix spesifik → test ulang
+AI membantu menerjemahkan requirement dosen yang berubah (dari JWT user ke M2M) menjadi perubahan kode di banyak file secara konsisten
+AI membantu memahami konsep dasar (.env, namespace PHP, middleware Laravel 11) dengan analogi yang mudah dipahami
+
+**Tantangan yang ditemui:**
+
+Perubahan requirement di tengah jalan (M2M) membutuhkan refactor di 4 file sekaligus — AI membantu menjaga konsistensi antar file
+Dokumentasi API dari dosen tidak selalu lengkap (contoh: struktur payload RabbitMQ baru diketahui setelah trial-error dari pesan error)
+
+
+**Pembelajaran:**
+
+Pentingnya membaca log error secara teliti sebelum menyimpulkan penyebab masalah
+Memisahkan service-service eksternal (SoapAuditService, RabbitMQService, SsoM2MService) membuat kode lebih mudah di-maintain dan di-refactor saat ada perubahan requirement

@@ -10,13 +10,14 @@ class SsoM2MService
 {
     private string $baseUrl;
     private string $apiKey;
+    private string $nim;
  
     public function __construct()
     {
         $this->baseUrl = env('IAE_SSO_BASE_URL', 'https://iae-sso.virtualfri.id');
         $this->apiKey  = env('IAE_API_KEY', 'KEY-MHS-280');
     }
- 
+    
     /**
      * Login M2M ke SSO dosen pakai API Key
      * Token di-cache selama 1 jam supaya tidak login berulang
@@ -30,8 +31,11 @@ class SsoM2MService
         }
  
         // Kalau tidak ada di cache, login ulang
+        $this->nim = env('IAE_NIM', '102022400198');
+
         $response = Http::post("{$this->baseUrl}/api/v1/auth/token", [
-            'api_key' => $this->apiKey,
+        'api_key' => $this->apiKey,
+        'nim'     => $this->nim,   
         ]);
  
         if (!$response->successful()) {

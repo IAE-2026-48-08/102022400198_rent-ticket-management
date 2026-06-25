@@ -16,11 +16,12 @@ namespace App\Http\Controllers;
  * url="http://localhost:8000",
  * description="API Main Server Host Lokal"
  * )
- * * @OA\SecurityScheme(
+ *
+ * @OA\SecurityScheme(
  * securityScheme="ApiKeyAuth",
  * type="apiKey",
  * in="header",
- * name="X-API-KEY",
+ * name="X-IAE-KEY",
  * description="Masukkan NIM Anda (102022400198) untuk membuka akses API"
  * )
  */

@@ -20,63 +20,16 @@
                 "tags": [
                     "Tickets"
                 ],
-                "summary": "Mengambil daftar riwayat tiket maintenance",
+                "summary": "Mengambil daftar tiket (IAE-T2 Standard)",
                 "operationId": "getTicketsList",
                 "responses": {
                     "200": {
-                        "description": "Sukses mengambil daftar tiket",
+                        "description": "Berhasil mengambil data",
                         "content": {
                             "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Daftar riwayat tiket berhasil diambil"
-                                        },
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "properties": {
-                                                    "id": {
-                                                        "type": "integer",
-                                                        "example": 1
-                                                    },
-                                                    "listing_id": {
-                                                        "type": "integer",
-                                                        "example": 1
-                                                    },
-                                                    "contract_id": {
-                                                        "type": "integer",
-                                                        "example": 101
-                                                    },
-                                                    "tenant_name": {
-                                                        "type": "string",
-                                                        "example": "Dawai"
-                                                    },
-                                                    "description": {
-                                                        "type": "string",
-                                                        "example": "Atap bocor"
-                                                    },
-                                                    "status": {
-                                                        "type": "string",
-                                                        "example": "pending"
-                                                    }
-                                                },
-                                                "type": "object"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
-                                }
+                                "schema": {}
                             }
                         }
-                    },
-                    "401": {
-                        "description": "Unauthorized (API Key tidak valid atau hilang)"
                     }
                 },
                 "security": [
@@ -89,7 +42,7 @@
                 "tags": [
                     "Tickets"
                 ],
-                "summary": "Menambah data baru saat tenant input tiket kerusakan",
+                "summary": "Menambahkan tiket keluhan baru",
                 "operationId": "storeTicket",
                 "requestBody": {
                     "required": true,
@@ -100,24 +53,29 @@
                                     "listing_id",
                                     "contract_id",
                                     "tenant_name",
+                                    "tenant_email",
                                     "description"
                                 ],
                                 "properties": {
                                     "listing_id": {
-                                        "type": "integer",
-                                        "example": 1
+                                        "type": "string",
+                                        "example": "1"
                                     },
                                     "contract_id": {
-                                        "type": "integer",
-                                        "example": 101
+                                        "type": "string",
+                                        "example": "100"
                                     },
                                     "tenant_name": {
                                         "type": "string",
                                         "example": "Dawai"
                                     },
+                                    "tenant_email": {
+                                        "type": "string",
+                                        "example": "dawai@telkom.id"
+                                    },
                                     "description": {
                                         "type": "string",
-                                        "example": "Atap kamar utama bocor air merembes"
+                                        "example": "AC Bocor"
                                     }
                                 },
                                 "type": "object"
@@ -127,55 +85,12 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Tiket berhasil disimpan",
+                        "description": "Tiket berhasil dibuat",
                         "content": {
                             "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Tiket keluhan berhasil disimpan secara resmi"
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "id": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                },
-                                                "listing_id": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                },
-                                                "contract_id": {
-                                                    "type": "integer",
-                                                    "example": 101
-                                                },
-                                                "tenant_name": {
-                                                    "type": "string",
-                                                    "example": "Dawai"
-                                                },
-                                                "description": {
-                                                    "type": "string",
-                                                    "example": "Atap bocor"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
+                                "schema": {}
                             }
                         }
-                    },
-                    "400": {
-                        "description": "Validasi gagal atau verifikasi service luar ditolak"
-                    },
-                    "422": {
-                        "description": "Unprocessable Entity"
                     }
                 },
                 "security": [
@@ -190,13 +105,12 @@
                 "tags": [
                     "Tickets"
                 ],
-                "summary": "Mengambil data spesifik satu tiket keluhan",
+                "summary": "Mengambil detail spesifik tiket",
                 "operationId": "getTicketById",
                 "parameters": [
                     {
                         "name": "id",
                         "in": "path",
-                        "description": "ID Tiket",
                         "required": true,
                         "schema": {
                             "type": "integer"
@@ -205,44 +119,20 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Sukses mengambil data spesifik tiket",
+                        "description": "Berhasil menemukan tiket",
                         "content": {
                             "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean",
-                                            "example": true
-                                        },
-                                        "message": {
-                                            "type": "string",
-                                            "example": "Detail tiket berhasil ditemukan"
-                                        },
-                                        "data": {
-                                            "properties": {
-                                                "id": {
-                                                    "type": "integer",
-                                                    "example": 1
-                                                },
-                                                "tenant_name": {
-                                                    "type": "string",
-                                                    "example": "Dawai"
-                                                },
-                                                "status": {
-                                                    "type": "string",
-                                                    "example": "pending"
-                                                }
-                                            },
-                                            "type": "object"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
+                                "schema": {}
                             }
                         }
                     },
                     "404": {
-                        "description": "Tiket tidak ditemukan"
+                        "description": "Tiket tidak ditemukan",
+                        "content": {
+                            "application/json": {
+                                "schema": {}
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -258,7 +148,7 @@
             "ApiKeyAuth": {
                 "type": "apiKey",
                 "description": "Masukkan NIM Anda (102022400198) untuk membuka akses API",
-                "name": "X-API-KEY",
+                "name": "X-IAE-KEY",
                 "in": "header"
             }
         }
